@@ -2,6 +2,7 @@
 name = "postcode-fr"
 version = "0.1.0"
 edition = "2021"
+authors = ["Lyokolux <lyokolux@protonmail.com>"]
 
 [[bin]]
 name = "builder"
