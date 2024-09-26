@@ -3,7 +3,7 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 struct Commune {
- #[serde(rename(deserialize = "codeCommune"))]
+    #[serde(rename(deserialize = "codeCommune"))]
     code: String,
     #[serde(rename(deserialize = "nomCommune"))]
     name: String,
@@ -25,9 +25,10 @@ pub fn create_db(conn: &Connection) -> Result<usize, rusqlite::Error> {
     )
 }
 
-pub fn seed(conn: &Connection, input: &str) -> Result<(), rusqlite::Error> {
+pub fn seed(conn: &mut Connection, input: &str) -> Result<(), rusqlite::Error> {
     let f = std::fs::read_to_string(input).expect("Could not open the source file.");
-    let insert_commune_prep = conn.prepare(
+    let tx = conn.transaction()?;
+    let insert_commune_prep = tx.prepare(
         "INSERT INTO commune (name, code, routingLabel, postcode) VALUES (?1, ?2, ?3, ?4)",
     );
     if insert_commune_prep.is_err() {
@@ -46,5 +47,8 @@ pub fn seed(conn: &Connection, input: &str) -> Result<(), rusqlite::Error> {
             &commune.postcode,
         ));
     }
+
+    insert_commune.finalize()?;
+    tx.commit()?;
     Ok(())
 }

@@ -1,4 +1,3 @@
 /target
 
-postcodes.sqlite
-postcodes.sqlite-journal
+db.sqlite

@@ -1,12 +1,12 @@
 use axum::{
-    extract::State,
+    extract::{Query, State},
     response::{ErrorResponse, Json},
     routing::get,
     Router,
 };
 use clap::Parser;
 use rusqlite::{Connection, Result};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone)]
 struct AppConfig {
@@ -25,6 +25,12 @@ struct Commune {
     postcode: String,
 }
 
+#[derive(Deserialize)]
+struct CommuneFilters {
+    #[serde(rename = "codeCommune")]
+    code_commune: Option<String>,
+}
+
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
@@ -35,15 +41,25 @@ struct Args {
 
 async fn get_communes(
     State(config): State<AppConfig>,
+    Query(filters): Query<CommuneFilters>,
 ) -> Result<Json<Vec<Commune>>, ErrorResponse> {
     // TODO: handle connection error by impl into StatusCode
     let conn = Connection::open(config.db_path).unwrap();
-    let mut stmt = conn
-        .prepare("SELECT code, name, routingLabel, postcode FROM commune")
-        .unwrap();
+
+    let mut query: Vec<String> = Vec::new();
+    query.push("SELECT code, name, routingLabel, postcode FROM commune".to_owned());
+    if let Some(code) = filters.code_commune {
+        if query.len() == 1 {
+            query.push("WHERE".to_owned())
+        }
+        query.push("code =".to_owned());
+        query.push(code);
+    }
+
+    let mut stmt = conn.prepare(&query.join(" ")).unwrap();
     let mut rows = stmt.query([]).unwrap();
 
-    let mut items: Vec<Commune> = Vec::new();
+    let mut items: Vec<Commune> = Vec::with_capacity(107073);
     while let Some(row) = rows.next().unwrap() {
         items.push(Commune {
             code: row.get(0).unwrap(),
@@ -72,7 +88,6 @@ async fn run(config: AppConfig) {
 
 fn main() -> Result<()> {
     let args = Args::parse();
-    println!("{:?}", args);
 
     run(AppConfig {
         db_path: args.input,

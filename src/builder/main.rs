@@ -12,7 +12,7 @@ struct Args {
     input: String,
 
     /// The name of the sqlite database
-    #[arg(short, long)]
+    #[arg(short, long, default_value = "db.sqlite")]
     output: Option<String>,
 }
 
@@ -32,9 +32,9 @@ fn main() -> Result<()> {
         .output
         .or(Some(derive_db_name_from(&args.input)))
         .unwrap();
-    let conn = Connection::open(default_output)?;
+    let mut conn = Connection::open(default_output)?;
 
     db::create_db(&conn)?;
-    db::seed(&conn, &args.input)?;
+    db::seed(&mut conn, &args.input)?;
     Ok(())
 }
